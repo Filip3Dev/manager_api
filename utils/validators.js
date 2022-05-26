@@ -7,6 +7,16 @@ exports.schemaBodyLogin = bodySchema({
   user_info: Joi.any()
 });
 
+exports.schemaBodyLoginGoogle = bodySchema({
+  email: Joi.string().email().required(),
+  familyName: Joi.string(),
+  givenName: Joi.string(),
+  googleId: Joi.string(),
+  imageUrl: Joi.string(),
+  name: Joi.string(),
+  user_info: Joi.any()
+});
+
 exports.schemaBodyRegister = bodySchema({
   email: Joi.string().email().required(),
   name: Joi.string().required(),

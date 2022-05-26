@@ -11,14 +11,29 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: [true, "Onde está seu nome?"]
     },
+    familyName: {
+        type: String,
+        required: false
+    },
+    givenName: {
+        type: String,
+        required: false
+    },
+    googleId: {
+        type: String,
+        required: false
+    },
+    imageUrl: {
+        type: String,
+        required: false
+    },
     cpf: {
         type: String,
-        required: true,
-        unique: true,
+        required: false,
     },
     password: {
         type: String,
-        required: true
+        required: false
     },
     passResetExpires: {
         type: Date
@@ -29,6 +44,11 @@ const UserSchema = new mongoose.Schema({
     accountTokenValidate: {
         type: String
     },
+    type: {
+        type: String,
+        enum: ["local", "google"],
+        default: "local"
+    },
     status: {
         type: String,
         enum: ["active", "deactive"],
@@ -38,6 +58,11 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ["basic", "pro"],
         default: "basic"
+    },
+    role: {
+        type: String,
+        enum: ["common", "manager", "admin"],
+        default: "common"
     },
 }, { timestamps: true });
 module.exports = mongoose.model("User", UserSchema);

@@ -5,20 +5,53 @@ const md5 = require('md5');
 const bcrypt = require('bcrypt');
 const User = require('../../models/User');
 const Apikey = require('../../models/Apikey');
+const Token = require('../../models/Token');
 const authService = require('../../utils/auth');
 const { logger } = require('../../utils/logger');
 const mailer = require('../../utils/mailer');
 const { SALT_KEY } = require('../../config').server;
 const { v4: uuidv4 } = require('uuid');
 
-exports.getSelf = async ctx => {
+exports.getUsers = async ctx => {
   try {
-    if (!ctx.user) {
-      ctx.status = 500;
-      ctx.body = { message: "Falha ao validar os dados!", error: true };
-      return 0;
-    }
-    let usuario = await User.findOne({ _id: ctx.user.id }, '-password').lean();
+    let usuarios = await User.find({}).lean();
+    ctx.status = 200;
+    ctx.body = { users: usuarios, message: "Dados encontrados!", };
+  } catch (error) {
+    console.log('getUsers ERROR: ', error);
+    ctx.status = 400;
+    ctx.body = {
+      message: "Falha ao buscar os usuarios!",
+      data: error,
+      error: true
+    };
+  }
+};
+
+exports.getRoles = async ctx => {
+  try {
+    let roles = [
+      { id: 1, role: "common" },
+      { id: 2, role: "manager" },
+      { id: 3, role: "admin" }
+    ];
+    ctx.status = 200;
+    ctx.body = { roles, message: "Dados encontrados!", };
+  } catch (error) {
+    console.log('getRoles ERROR: ', error);
+    ctx.status = 500;
+    ctx.body = {
+      message: "Falha ao buscar as roles!",
+      data: error,
+      error: true
+    };
+  }
+};
+
+exports.getUser = async ctx => {
+  try {
+    let { id } = ctx.params;
+    let usuario = await User.findOne({ _id: id }).lean();
     ctx.status = 200;
     ctx.body = { user: usuario, message: "Dados encontrados!", };
   } catch (error) {
@@ -26,6 +59,22 @@ exports.getSelf = async ctx => {
     ctx.status = 400;
     ctx.body = {
       message: "Falha ao buscar o usuario!",
+      data: error,
+      error: true
+    };
+  }
+};
+
+exports.getTokens = async ctx => {
+  try {
+    let tokens = await Token.find({}).lean();
+    ctx.status = 200;
+    ctx.body = { tokens, message: "Dados encontrados!", };
+  } catch (error) {
+    console.log('getTokens ERROR: ', error);
+    ctx.status = 500;
+    ctx.body = {
+      message: "Falha ao buscar os tokens!",
       data: error,
       error: true
     };

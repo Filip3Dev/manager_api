@@ -4,6 +4,7 @@ const controller = require('./user.controller');
 const authService = require('../../utils/auth');
 const {
   schemaBodyLogin,
+  schemaBodyLoginGoogle,
   schemaBodyRegister,
   schemaBodyApiKey
 } = require('../../utils/validators');
@@ -13,6 +14,7 @@ module.exports = Router => {
 
   router
     .get('/', authService.authorize, controller.getSelf)
+    .post('/auth', schemaBodyLoginGoogle, controller.loginGoogle)
     .post('/login', schemaBodyLogin, controller.loginOne)
     .get('/apikey', authService.authorize, controller.listApikeys)
     .post('/apikey', authService.authorize, schemaBodyApiKey, controller.createApikey)
