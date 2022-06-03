@@ -40,3 +40,9 @@ exports.schemaBodyEmitToken = bodySchema({
   totalSupply: Joi.number(),
   maxSupply: Joi.number(),
 });
+
+exports.schemaBodyMintToken = bodySchema({
+  token: Joi.string().required(),
+  to: Joi.string().required(),
+  amount: Joi.number().required()
+});

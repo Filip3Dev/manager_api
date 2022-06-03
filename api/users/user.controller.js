@@ -77,7 +77,7 @@ exports.loginOne = async ctx => {
     console.log('createOne ERROR: ', error);
     ctx.status = 400;
     ctx.body = {
-      message: "Falha ao cadastrar o usuario!",
+      message: "Falha ao autenticar o usuario!",
       data: error,
       error: true
     };

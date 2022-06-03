@@ -59,10 +59,12 @@ class DynamicSmartContract {
     const raw = '0x' + serializedTx.toString('hex');
 
     try {
-      console.log('Sending transaction...');
+      console.log('Sending transaction...\n');
+      let saldo = await this._web3.eth.getBalance(this._caller.address);
+      console.log('Saldo Inicial => ', this._web3.utils.fromWei(saldo, 'ether'));
       const transaction = await this._web3.eth.sendSignedTransaction(raw);
-      const saldo = await this._web3.eth.getBalance(this._caller.address);
-      console.log('saldo Final => ', this._web3.utils.fromWei(saldo, 'ether'));
+      saldo = await this._web3.eth.getBalance(this._caller.address);
+      console.log('Saldo Final => ', this._web3.utils.fromWei(saldo, 'ether'));
       let chain = await this._web3.eth.getChainId();
       return {
         error: false,
