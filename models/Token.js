@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 const TokenSchema = new mongoose.Schema({
+  tokenType: {
+    type: String,
+    required: true
+  },
   address: {
     type: String,
     required: true,

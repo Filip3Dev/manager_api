@@ -33,6 +33,7 @@
     "checksum": "^1.0.0",
     "dotenv": "^8.0.0",
     "ethereumjs-tx": "^2.1.1",
+    "google-auth-library": "^8.7.0",
     "joi": "^14.3.1",
     "jsonwebtoken": "^8.5.1",
     "koa": "2.7.0",

@@ -12,11 +12,33 @@ const mailer = require('../../utils/mailer');
 const { SALT_KEY } = require('../../config').server;
 const { v4: uuidv4 } = require('uuid');
 
+async function checkUser(ctx) {
+  let userGet = await User.findOne({ _id: ctx.user.id }).lean();
+    let checkUserTokens = await Token.find({ creator: ctx.user.id }).lean();
+    if(userGet.plan == 'basic' && checkUserTokens.length >= 5){
+      ctx.status = 400;
+      ctx.body = {
+        message: `Não é permitido cadastrar novo Token. Tokens atuais: ${checkUserTokens.length}!`,
+        data: {},
+        error: true
+      };
+      return ctx;
+    }
+}
+
+const queryCtt = {
+  '0': () => 'erc20',
+  '1': () => 'erc721',
+  '2': () => 'erc1155'
+};
+
 exports.getSelf = async ctx => {
   try {
     let usuario = await User.findOne({ _id: ctx.user.id }, '-password').lean();
+    let tokens = await Token.find({ creator: ctx.user.id }).lean();
+    
     ctx.status = 200;
-    ctx.body = { user: usuario, message: "Dados encontrados!", };
+    ctx.body = { user: usuario, tokens, message: "Dados encontrados!", };
   } catch (error) {
     console.log('getSelf ERROR: ', error);
     ctx.status = 400;
@@ -38,7 +60,7 @@ exports.getAllTokens = async ctx => {
       listTokens.push({ token: allTokens['0'][index], type: allTokens['1'][index] });
     }
     ctx.status = 200;
-    ctx.body = { token: listTokens, message: "Dados encontrados!", };
+    ctx.body = { manager: process.env.CTT_MANAGER, address, tokens: listTokens, message: "Dados encontrados!", };
   } catch (error) {
     console.log('getAllTokens ERROR: ', error);
     ctx.status = 500;
@@ -120,18 +142,15 @@ exports.getFactoryBasicInfo = async ctx => {
 exports.emitToken = async ctx => {
   try {
     ctx.validate(); // validate body
-
-    let userGet = await User.findOne({ _id: ctx.user.id }).lean();
-    let checkUserTokens = await Token.find({ creator: ctx.user.id }).lean();
-    if(userGet.plan == 'basic' && checkUserTokens.length >= 5){
-      ctx.status = 400;
-      ctx.body = {
-        message: `Não é permitido cadastrar novo Token. Tokens atuais: ${checkUserTokens.length}!`,
-        data: {},
-        error: true
-      };
-      return ctx;
-    }
+    await checkUser(ctx);
+    logger.log({
+      header: ctx.request.header,
+      body: ctx.request.body,
+      method: ctx.method,
+      url: ctx.url,
+      user_info: {},
+      kind: 'emitToken'
+    });
 
     const { factory, name, symbol, decimals, totalSupply, maxSupply, tokenType } = ctx.request.body;
     let smartContract = new ctt({ contractHash: factory, type: 'factory' });
@@ -162,6 +181,7 @@ exports.emitToken = async ctx => {
     let tk = new Token({
       chain: resp.chain,
       creator: ctx.user.id,
+      tokenType,
       blockNumber: resp.data.blockNumber,
       address: resp.data.logs[0].address,
       txhash: resp.data.transactionHash,
@@ -176,3 +196,52 @@ exports.emitToken = async ctx => {
     ctx.body = { message: "Falha ao emitir o novo token!", data: error, error: true };
   }
 };
+
+exports.getTokenInfo = async ctx => {
+  try {
+    logger.log({
+      header: ctx.request.header,
+      body: ctx.request.body,
+      method: ctx.method,
+      url: ctx.url,
+      user_info: {},
+      kind: 'getTokenInfo'
+    });
+    const { token } = ctx.request.query;
+    let userToken = await Token.findOne({ address: token }).lean();
+    const type = queryCtt[userToken.tokenType]();
+    if(userToken.tokenType == 2){
+      let smartContract = new ctt({ contractHash: token, type });
+      let { address } = smartContract.caller;
+      const name = await smartContract.contract.methods.name().call({ from: address });
+      const paused = await smartContract.contract.methods.paused().call({ from: address });
+      const symbol = await smartContract.contract.methods.symbol().call({ from: address });
+      const MAX_SUPPLY = await smartContract.contract.methods.MAX_SUPPLY().call({ from: address });
+      const MINTER_ROLE = await smartContract.contract.methods.MINTER_ROLE().call({ from: address });
+      const PAUSER_ROLE = await smartContract.contract.methods.PAUSER_ROLE().call({ from: address });
+      ctx.status = 200;
+      return ctx.body = { data: {
+        token,
+        name,
+        symbol,
+        paused,
+        max_supply: Number(MAX_SUPPLY),
+        minter_role: MINTER_ROLE,
+        pauser_role: PAUSER_ROLE,
+      }, message: "Dados encontrados!" };
+    }
+    
+    // const decimals = await smartContract.contract.methods
+    // const decimals = await smartContract.contract.methods.decimals().call({ from: address });
+    ctx.status = 200;
+    ctx.body = { data: {}, message: "Dados encontrados!", };
+  } catch (error) {
+    console.log('getTokenInfo ERROR: ', error);
+    ctx.status = 500;
+    ctx.body = {
+      message: "Falha ao buscar os tokens!",
+      data: error,
+      error: true
+    };
+  }
+}

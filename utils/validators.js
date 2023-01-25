@@ -8,12 +8,7 @@ exports.schemaBodyLogin = bodySchema({
 });
 
 exports.schemaBodyLoginGoogle = bodySchema({
-  email: Joi.string().email().required(),
-  familyName: Joi.string(),
-  givenName: Joi.string(),
-  googleId: Joi.string(),
-  imageUrl: Joi.string(),
-  name: Joi.string(),
+  token: Joi.string(),
   user_info: Joi.any()
 });
 

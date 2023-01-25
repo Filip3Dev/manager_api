@@ -10,6 +10,8 @@ const { logger } = require('../../utils/logger');
 const mailer = require('../../utils/mailer');
 const { SALT_KEY } = require('../../config').server;
 const { v4: uuidv4 } = require('uuid');
+const {OAuth2Client} = require('google-auth-library');
+const client = new OAuth2Client(process.env.CLIENT_ID);
 
 exports.getSelf = async ctx => {
   try {
@@ -24,6 +26,49 @@ exports.getSelf = async ctx => {
   } catch (error) {
     console.log('getSelf ERROR: ', error);
     ctx.status = 400;
+    ctx.body = {
+      message: "Falha ao buscar o usuario!",
+      data: error,
+      error: true
+    };
+  }
+};
+
+exports.loginGoogle = async ctx => {
+  try {
+    const { token, user_info = {} } = ctx.request.body;
+    const { payload } = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.CLIENT_ID,
+    });
+    logger.log({ header: ctx.request.header, body: ctx.request.body, method: ctx.method, url: ctx.url, user_info, kind: 'loginGoogle' });
+    let userGet = await User.findOne({ googleId: payload.sub, email: payload.email }).lean();
+    if(!userGet){
+      let newUser = new User({
+        email: payload.email,
+        familyName: payload.family_name,
+        givenName: payload.given_name,
+        googleId: payload.sub,
+        imageUrl: payload.picture,
+        name: payload.name,
+        status: 'active',
+        type: 'google'
+      });
+      newUser = await newUser.save();
+      let token = await authService.generateToken({ email: newUser.email, id: newUser._id, name: newUser.name });
+      ctx.status = 201;
+      ctx.body = { message: "Usuario registrado!", data: { user: newUser, token }, error: false };
+      return ctx;
+    }
+
+    let tokenz = await authService.generateToken({ email: userGet.email, id: userGet._id, name: userGet.name });
+    console.log('TK: ', tokenz);
+
+    ctx.status = 200;
+    ctx.body = { message: "Usuario encontrado!", data: { user: userGet, token: tokenz }, error: false };
+  } catch (error) {
+    console.log('loginGoogle ERROR: ', error);
+    ctx.status = 500;
     ctx.body = {
       message: "Falha ao buscar o usuario!",
       data: error,
@@ -84,38 +129,6 @@ exports.loginOne = async ctx => {
   }
 };
 
-exports.loginGoogle = async ctx => {
-  try {
-    ctx.validate(); // validate body
-    let { email, familyName, givenName, googleId, imageUrl, name, user_info = {} } = ctx.request.body;
-    logger.log({ header: ctx.request.header, body: ctx.request.body, method: ctx.method, url: ctx.url, user_info: user_info, kind: 'loginGoogle' });
-
-    let userGet = await User.findOne({ email, googleId }).lean();
-    if(!userGet){
-      let newUser = new User({ email, familyName, givenName, googleId, imageUrl, name, type: 'google' });
-      newUser = await newUser.save();
-      let token = await authService.generateToken({ email: newUser.email, id: newUser._id, name: newUser.name, });
-
-      ctx.status = 201;
-      ctx.body = { message: "Usuario registrado!", data: { user: newUser, token }, error: false };
-      return ctx;
-    }
-
-    let token = await authService.generateToken({ email: userGet.email, id: userGet._id, name: userGet.name });
-
-    ctx.status = 200;
-    ctx.body = { user: userGet, token };
-  } catch (error) {
-    console.log('loginGoogle ERROR: ', error);
-    ctx.status = 500;
-    ctx.body = {
-      message: "Falha ao autenticar o usuario!",
-      data: error,
-      error: true
-    };
-  }
-};
-
 exports.createOne = async ctx => {
   try {
     ctx.validate(); // validate body
@@ -145,7 +158,7 @@ exports.createOne = async ctx => {
     let newUser = new User({ email, name, cpf, password: pass });
     newUser = await newUser.save();
     ctx.status = 201;
-    ctx.body = { date: newUser, error: false, message: 'Usuario registrado com sucesso!' };
+    ctx.body = { data: newUser, error: false, message: 'Usuario registrado com sucesso!' };
   } catch (error) {
     console.log('createOne ERROR: ', error);
     ctx.status = 400;
@@ -224,7 +237,7 @@ exports.createApikey = async ctx => {
     let newKey = new Apikey({ title, network, api_key: uuidv4(), status: true, user: userGet._id });
     newKey = await newKey.save();
     ctx.status = 201;
-    ctx.body = { date: newKey, error: false, message: 'Registro efetuado com sucesso!' };
+    ctx.body = { data: newKey, error: false, message: 'Registro efetuado com sucesso!' };
   } catch (error) {
     console.log('createApikey ERROR: ', error);
     ctx.status = 400;
@@ -252,7 +265,7 @@ exports.deleteApikey = async ctx => {
     await Apikey.findOneAndDelete({ _id: keyId, user: ctx.user.id });
 
     ctx.status = 200;
-    ctx.body = { date: {}, error: false, message: 'Remoção efetuada com sucesso!' };
+    ctx.body = { data: {}, error: false, message: 'Remoção efetuada com sucesso!' };
   } catch (error) {
     console.log('deleteApikey ERROR: ', error);
     ctx.status = 500;

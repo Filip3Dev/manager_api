@@ -8,6 +8,8 @@ module.exports = Router => {
   const router = new Router({ prefix: `/uplayer` });
 
   router
-    .post('/mintToken', authService.authorizeApi, schemaBodyMintToken, controller.mintToken);
+    .post('/mintToken', authService.authorizeApi, schemaBodyMintToken, controller.mintToken)
+    .get('/genwallet', authService.authorizeApi, controller.generateAddress)
+    .get('/listTokens', authService.authorizeApi, controller.listTokens);
   return router;
 };

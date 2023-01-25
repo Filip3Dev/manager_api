@@ -43,7 +43,7 @@ require('./models/User');
 server
   .use(logger({
     level: 'debug',
-    transports: [logzioWinstonTransport],
+    transports: [logzioWinstonTransport, logTransp],
     reqSelect: ['body'],
     reqUnselect: ['header.cookie', 'body.password'],
   }))

@@ -14,13 +14,18 @@ const queryCtt = {
   'erc1155': () => '/contracts/Standard1155.json'
 };
 
-// logFruit[fruit]();
+function choose() {
+  const lista = [process.env.POLYGON_T, process.env.POLYGON_TV2]
+  var index = Math.floor(Math.random() * lista.length);
+  return lista[index];
+}
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
+
 class DynamicSmartContract {
-  constructor({ contractHash, type }) {
+  constructor({ contractHash = '0xdC8641F0F3DcBd8BACFb68F71fF3ce87602b3749', type = 'manager' }) {
     const contractInterface = fs.readFileSync(__dirname+queryCtt[type](), 'utf-8');
-    const web3Provider = process.env.POLYGON_T;
+    const web3Provider = choose();
     // const web3Provider = process.env.NET === 'testnet' ? process.env.PROVIDER_TEST : process.env.PROVIDER_MAIN;
     
     this._interface = JSON.parse(contractInterface).abi;
